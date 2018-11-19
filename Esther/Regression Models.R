@@ -45,6 +45,8 @@ ridge.bestlambdatrain.t = predict(ridge.models.train, s = bestlambda.ridge, newx
 mean((ridge.bestlambdatrain.t - y[train])^2) #0.04097878
 ridge.bestlambdatrain = predict(ridge.models.train, s = bestlambda.ridge, newx = x[test, ])
 mean((ridge.bestlambdatrain - y.test)^2) #0.04489113
+plot(ridge.bestlambdatrain,y.test,xlab="Prediction",ylab="Log Sale Price", main="Ridge Regression Fit")
+abline(0,1,col=2,lty=2)
 
 cv.lasso.out = cv.glmnet(x[train, ], y[train],
                          lambda = grid, alpha = 1, nfolds = 10)
