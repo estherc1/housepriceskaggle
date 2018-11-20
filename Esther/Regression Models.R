@@ -28,9 +28,9 @@ stepmodel.fullhouse.n <- houses.n[,c(names(backwardstep.n$xlevels),"SalePrice")]
 stepmodel.fullhouse.m <- fullhouse.m[,c(names(backwardstep.m$xlevels),"SalePrice")]
 
 #########################CROSS VALIDATION###################################
-grid = 10^seq(5, -2, length = 1000)  
-x=model.matrix(log(SalePrice)~.-1,data = stepmodel.fullhouse.m.or)[1:1444,]
-y=log(stepmodel.fullhouse.m.or$SalePrice)[1:1444]
+grid = 10^seq(5, -5, length = 1000)  
+x=model.matrix(log(SalePrice)~.-1,data = stepmodel.fullhouse.m.or)[1:1459,]
+y=log(stepmodel.fullhouse.m.or$SalePrice)[1:1459]
 train = sample(1:nrow(x), 7*nrow(x)/10)
 test = (-train)
 y.train = y[train]
@@ -40,35 +40,52 @@ cv.ridge.out = cv.glmnet(x[train, ], y[train],
 bestlambda.ridge = cv.ridge.out$lambda.min
 bestlambda.ridge
 log(bestlambda.ridge)
-ridge.models.train = glmnet(x[train, ], y[train], alpha = 0, lambda = grid)
-ridge.bestlambdatrain.t = predict(ridge.models.train, s = bestlambda.ridge, newx = x[train, ])
-mean((ridge.bestlambdatrain.t - y[train])^2) #0.04097878
-ridge.bestlambdatrain = predict(ridge.models.train, s = bestlambda.ridge, newx = x[test, ])
-mean((ridge.bestlambdatrain - y.test)^2) #0.04489113
-plot(ridge.bestlambdatrain,y.test,xlab="Prediction",ylab="Log Sale Price", main="Ridge Regression Fit")
+ridge.models.train = glmnet(x, y, alpha = 0, lambda = bestlambda.ridge)
+ridge.bestlambdatrain = predict(ridge.models.train, s = bestlambda.ridge, newx = x)
+sqrt(mean((ridge.bestlambdatrain - y)^2)) #0.2015517
+plot(ridge.bestlambdatrain,y,xlab="Prediction",ylab="Log Sale Price", main="Ridge Regression Fit")
 abline(0,1,col=2,lty=2)
 
 cv.lasso.out = cv.glmnet(x[train, ], y[train],
                          lambda = grid, alpha = 1, nfolds = 10)
+
 bestlambda.lasso = cv.lasso.out$lambda.min
 bestlambda.lasso
 log(bestlambda.lasso)
-lasso.models.train = glmnet(x[train, ], y[train], alpha = 1, lambda = grid)
-lasso.bestlambdatrain.t = predict(lasso.models.train, s = bestlambda.lasso, newx = x[train, ])
-mean((lasso.bestlambdatrain.t - y[train])^2) #0.04849104
-lasso.bestlambdatrain = predict(lasso.models.train, s = bestlambda.lasso, newx = x[test, ])
-mean((lasso.bestlambdatrain - y.test)^2) #0.04546142
+lasso.models.train = glmnet(x, y, alpha = 1, lambda = bestlambda.lasso)
+lasso.bestlambdatrain = predict(lasso.models.train, s = bestlambda.lasso, newx = x)
+sqrt(mean((lasso.bestlambdatrain - y)^2)) #0.2189484
 
-cv.el.out = cv.glmnet(x[train, ], y[train],
-                         lambda = grid, alpha = 0.25, nfolds = 10)
-bestlambda.el = cv.el.out$lambda.min
-bestlambda.el
-log(bestlambda.el)
-el.models.train = glmnet(x[train, ], y[train], alpha = 1, lambda = grid)
-el.bestlambdatrain.t = predict(el.models.train, s = bestlambda.el, newx = x[train, ])
-mean((el.bestlambdatrain.t - y[train])^2) #0.04849104
-el.bestlambdatrain = predict(el.models.train, s = bestlambda.el, newx = x[test, ])
-mean((el.bestlambdatrain - y.test)^2) #0.04546142
+
+reglmfunction <- function(x,y,train,alpha){
+  grid = 10^seq(5, -5, length = 1000)
+  cv.out = cv.glmnet(x[train, ], y[train],lambda = grid, alpha = alpha, nfolds = 10)
+  bestlambda = cv.out$lambda.min
+  models.train = glmnet(x, y, alpha = alpha, lambda = bestlambda)
+  bestlambdatrain = predict(models.train, s = bestlambda, newx = x)
+  rmse = sqrt(mean((bestlambdatrain - y)^2))
+  return(list(RMSE=rmse,BestLambda=bestlambda))
+}
+
+rmsecv <- c()
+bestlambdas <- c()
+for(i in 1:100){
+  alpha = seq(0,1,length=100)[i]
+  rmsecv[i]= reglmfunction(x,y,train,alpha)$RMSE
+  bestlambdas = c(bestlambdas,reglmfunction(x,y,train,alpha)$BestLambda)}
+
+plot(seq(0,1,length=100),rmsecv,xlab="alpha",ylab="RMSE",main="RMSE From Ridge to Lasso",type="b",col=3)
+plot(seq(0,1,length=100),bestlambdas,xlab="alpha",ylab="Lambda",main="Lambda From Ridge to Lasso",type="b",col=3)
+
+
+library(ggplot2)
+regreg <- data.frame(alpha=seq(0,1,length=100), RMSE = rmsecv, BestLambda = bestlambdas)
+
+dat = subset(regreg, select = c("RMSE","BestLambda"))
+ggplot(regreg, aes(x = 1:1000, y = value, color = variable)) +  
+  geom_point() + geom_line()
+ggplot(regreg, aes(x=alpha, y=RMSE)) + geom_point()+
+  geom_hline(yintercept=min(rmsecv), color = "red") 
 
 ###################################Multiple Models#########################################
 library(glmnet)
@@ -122,9 +139,13 @@ performcv <- function(data, features){
 
 
 ##predict test:
-x.test=model.matrix(log(SalePrice)~.-1,data = stepmodel.fullhouse.m.or)[1444:2902,]
+x.test=model.matrix(log(SalePrice)~.-1,data = stepmodel.fullhouse.m.or)[1459:2917,]
 
-prediction1 = exp(predict(ridge.models.train, s = bestlambda.ridge, newx = x.test))
+models.train = glmnet(x, y, alpha = seq(0,1,length=100)[2], lambda = bestlambdas[2])
+bestlambdatrain = predict(models.train, s = bestlambdas[2], newx = x)
+sqrt(mean((bestlambdatrain - y)^2)) #0.2018791
+
+prediction1 = exp(predict(models.train, s = bestlambdas[2], newx = x.test))
 submission = data.frame(Id=house.test$Id, SalePrice=prediction1)
 write.csv(submission,"submit1.csv", row.names = FALSE)
 

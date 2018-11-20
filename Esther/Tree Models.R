@@ -9,7 +9,7 @@ library(MASS)
 set.seed(0)
 
 #Training the tree to predict the median value of owner-occupied homes (in $1k).
-tree.house.c = tree(log(SalePrice) ~ ., cormodel.fullhouse.m.or, subset = train)
+tree.house.c = tree(log(SalePrice) ~ ., stepmodel.fullhouse.m.or, subset = train)
 summary(tree.house.c)
 
 #Visually inspecting the regression tree.

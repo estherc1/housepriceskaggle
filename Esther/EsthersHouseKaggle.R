@@ -281,14 +281,14 @@ simpleEDAtable <- function(data, expvarlist){
       EDAtable <- EDAtable %>% arrange(AIC)
       return(EDAtable)}
 
-EDAtable1 <- simpleEDAtable(house.c[-sp.outlier,],colnames(house.c)[-c(1,81)])
+EDAtable1 <- simpleEDAtable(house.c,colnames(house.c)[-c(1,81)])
 EDAtable2 <- simpleEDAtable(fullhouse.c[1:1459,],colnames(fullhouse.c)[-c(1,88,89)])
 
 ordnum <- c("BsmtCond", "BsmtExposure", "BsmtFinType1", "BsmtFinType2", "BsmtQual", "ExterCond", 
             "ExterQual", "FireplaceQu", "Functional", "GarageCond", "GarageQual", "HeatingQC", 
             "KitchenQual", "LandSlope", "PavedDrive")
 
-EDAtable3 <- simpleEDAtable(house.c[-sp.outlier,],ordnum)
+EDAtable3 <- simpleEDAtable(house.c,"PoolQC")
 EDAtable4 <- simpleEDAtable(houses.n[1:1459,],ordnum)
 
 ifelse(EDAtable3$AIC < EDAtable4$AIC, "c","n")
@@ -351,8 +351,8 @@ outliersrm <- union(sp.outlier,sf.outlier)
 
 sp.outlier <- which(house.c$SalePrice > quantile(house.c$SalePrice)[4] + 3*IQR(house.c$SalePrice))
 
-fullhouse.m.or <- fullhouse.m[-outliersrm,]
-house.m.train.or <- fullhouse.m[1:1444,]
+fullhouse.m.or <- fullhouse.m[]
+house.m.train.or <- fullhouse.m[1:1459,]
 house.m.modeldata.or <- house.m.train.or[,-c(which(colnames(house.c) %in% not.include),89)]
 
 par(mfrow=c(1,3))
